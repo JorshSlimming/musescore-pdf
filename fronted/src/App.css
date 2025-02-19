@@ -70,3 +70,61 @@ button:disabled {
   color: white;
   font-size: 0.8rem;
 }
+
+/* Estilos mejorados */
+.download-card {
+  background: #2c3e50;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+  width: 90%;
+  max-width: 600px;
+  text-align: left;
+}
+
+.score-preview {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.music-icon {
+  font-size: 2.5rem;
+  background: #3498db;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font-size: 0.9em;
+  color: #bdc3c7;
+}
+
+.error-banner {
+  background: #e74c3c;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-top: 1rem;
+  width: 100%;
+  max-width: 600px;
+  animation: slideIn 0.3s ease;
+}
+
+button.loading {
+  background: #7f8c8d;
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+@keyframes slideIn {
+  from { transform: translateY(-20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

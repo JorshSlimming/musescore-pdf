@@ -4,93 +4,106 @@ import './App.css';
 
 function App() {
   const [url, setUrl] = useState('');
-  const [scoreName, setScoreName] = useState('');
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
+  const [currentStep, setCurrentStep] = useState(0);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!url) {
-      setError('Por favor ingresa una URL');
+      setError('Por favor ingresa una URL de MuseScore');
       return;
     }
     
     setLoading(true);
     setError('');
-    setScoreName('');
+    setCurrentStep(1);
 
     try {
-      // Primera llamada para obtener solo el nombre
-      const nameResponse = await axios.post('http://localhost:5000/backend', { 
-        url,
-        metadataOnly: true 
-      });
-      
-      // Mostrar el nombre inmediatamente
-      setScoreName(nameResponse.data.name);
-
-      // Segunda llamada para generar el PDF
-      const pdfResponse = await axios.post('http://localhost:5000/backend', { 
-        url 
-      }, {
+      // Paso 1: Enviar URL al backend para generar el PDF
+      setCurrentStep(1);
+      const response = await axios.post('http://localhost:5000/generate-pdf', { url }, {
         responseType: 'blob',
         onDownloadProgress: (progressEvent) => {
-          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          const percent = Math.min(95, Math.round((progressEvent.loaded * 100) / progressEvent.total));
           setProgress(percent);
         }
       });
 
-      // Descargar el PDF
-      const urlBlob = window.URL.createObjectURL(new Blob([pdfResponse.data]));
+      // Obtener el nombre del archivo desde los headers
+      const contentDisposition = response.headers['content-disposition'];
+      const filenameMatch = contentDisposition ? contentDisposition.match(/filename="(.+)"/) : null;
+      const fileName = filenameMatch ? filenameMatch[1] : 'partitura.pdf';
+
+      // Paso 2: Descargar el PDF
+      setCurrentStep(2);
+      setProgress(100);
+
+      const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
-      link.href = urlBlob;
-      link.setAttribute('download', `${scoreName}.pdf`);
+      link.href = downloadUrl;
+      link.setAttribute('download', fileName);
       document.body.appendChild(link);
       link.click();
-      link.remove();
+
+      setTimeout(() => {
+        window.URL.revokeObjectURL(downloadUrl);
+        link.remove();
+      }, 1000);
 
     } catch (err) {
-      setError('Error al procesar la partitura');
-      console.error(err);
+      const errorMessage = err.response?.data?.error || 'Error al procesar la partitura';
+      setError(errorMessage);
     } finally {
       setLoading(false);
       setProgress(0);
+      setCurrentStep(0);
     }
+  };
+
+  const getStepLabel = () => {
+    const steps = {
+      1: 'Generando PDF...',
+      2: 'Descargando...'
+    };
+    return steps[currentStep] || '';
   };
 
   return (
     <div className="App">
       <header className="App-header">
-        <h1>Descargador de Partituras</h1>
+        <h1>Descargador de Partituras MuseScore</h1>
         <form onSubmit={handleSubmit}>
           <input
-            type="text"
+            type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
-            placeholder="Pega la URL de la partitura"
+            placeholder="Ej: https://musescore.com/user/12345/scores/67890"
+            pattern="https://musescore.com/.*"
             disabled={loading}
           />
-          <button type="submit" disabled={loading}>
-            {loading ? 'Procesando...' : 'Generar PDF'}
+          <button 
+            type="submit" 
+            disabled={loading}
+            className={loading ? 'loading' : ''}
+          >
+            {loading ? getStepLabel() : 'Generar PDF'}
           </button>
         </form>
 
-        {error && <p className="error">{error}</p>}
+        {error && <div className="error-banner">{error}</div>}
         
-        {scoreName && (
-          <div className="download-info">
-            <p>📄 Partitura detectada:</p>
-            <h3>{scoreName}</h3>
-            {loading && (
-              <div className="progress-container">
-                <div 
-                  className="progress-bar"
-                  style={{ width: `${progress}%` }}
-                ></div>
-                <span>{progress}% completado</span>
-              </div>
-            )}
+        {loading && (
+          <div className="progress-container">
+            <div 
+              className="progress-bar"
+              style={{ width: `${progress}%` }}
+            />
+            <div className="progress-stats">
+              <span>{progress}% completado</span>
+              <span>Paso {currentStep} de 2</span>
+            </div>
           </div>
         )}
       </header>
