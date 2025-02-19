@@ -7,16 +7,30 @@ const { PDFDocument } = require('pdf-lib');
 const express = require('express');
 const cors = require('cors');
 
-
 const app = express();
 const port = 5000;
+const corsOptions = {
+  exposedHeaders: ['X-PDF-Name'],
+};
 
-app.use(cors());
-app.use(express.json())
-
+app.use(cors(corsOptions));
 app.use(express.json());
 
-app.post('/generate-pdf', async (req, res) => {
+async function retryGoto(page, url, options, retries) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      await page.goto(url, options);
+      return; // Si la navegación es exitosa, salir de la función
+    } catch (error) {
+      console.error(`❌ Error al navegar a la URL (intento ${i + 1} de ${retries}):`, error);
+      if (i === retries - 1) {
+        throw error; // Si es el último intento, lanzar el error
+      }
+    }
+  }
+}
+
+app.post('/get-pdf-name', async (req, res) => {
   const { url } = req.body;
   if (!url) {
     return res.status(400).json({ error: 'URL is required' });
@@ -28,8 +42,8 @@ app.post('/generate-pdf', async (req, res) => {
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
     await page.setViewport({ width: 1280, height: 800 });
 
+    await retryGoto(page, url, { waitUntil: 'networkidle2', timeout: 5000 }, 6);
     console.log('🚀 Navegando a la página...');
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
 
     console.log('🔍 Extrayendo el nombre para el PDF...');
     const name = await page.evaluate(() => {
@@ -39,6 +53,29 @@ app.post('/generate-pdf', async (req, res) => {
     });
     console.log(`🔖 Nombre extraído: ${name}`);
 
+    await browser.close();
+    res.json({ name: `${name}` });
+  } catch (error) {
+    console.error('❌ Error:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.post('/generate-pdf', async (req, res) => {
+  const { url, name } = req.body;
+  if (!url || !name) {
+    return res.status(400).json({ error: 'URL and name are required' });
+  }
+
+  try {
+    const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+    await page.setViewport({ width: 1280, height: 800 });
+
+    await retryGoto(page, url, { waitUntil: 'networkidle2', timeout: 10000 }, 6);
+    console.log('🚀 Navegando a la página...');
+
     console.log('🔍 Buscando contenedores...');
     await page.waitForSelector('.EEnGW.F16e6', { timeout: 15000 });
     const containers = await page.$$('.EEnGW.F16e6');
@@ -47,7 +84,7 @@ app.post('/generate-pdf', async (req, res) => {
     const allImageUrls = [];
     for (let i = 0; i < containers.length; i++) {
       await containers[i].scrollIntoView();
-      await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 500)));
+      await page.evaluate(() => new Promise(resolve => setTimeout(resolve, 1000)));
       const urls = await page.evaluate(container => {
         return Array.from(container.querySelectorAll('.KfFlO'))
           .map(element => {
@@ -98,14 +135,15 @@ app.post('/generate-pdf', async (req, res) => {
     }
 
     const pdfBytes = await pdfDoc.save();
-    const pdfPath = path.join(__dirname, `${name}.pdf`);
+    const pdfPath = path.join(__dirname, `${name}`);
     fs.writeFileSync(pdfPath, pdfBytes);
-    console.log(`📄 PDF generado con éxito: ${pdfPath}`);
+    console.log(`📄 PDF generado con éxito: ${name}`);
 
     images.forEach(imagePath => fs.unlinkSync(imagePath));
     await browser.close();
 
-    res.download(pdfPath, `${name}.pdf`, () => fs.unlinkSync(pdfPath));
+    res.download(pdfPath, name, () => fs.unlinkSync(pdfPath));
+    
   } catch (error) {
     console.error('❌ Error:', error);
     res.status(500).json({ error: 'Internal Server Error' });
@@ -113,5 +151,5 @@ app.post('/generate-pdf', async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
+  console.log(`Servidor corriendo en http://localhost:${port}`);
 });

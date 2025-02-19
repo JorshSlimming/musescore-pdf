@@ -34,80 +34,6 @@ button:disabled {
   cursor: not-allowed;
 }
 
-.download-info {
-  margin-top: 2rem;
-  padding: 1rem;
-  background-color: #20232a;
-  border-radius: 10px;
-}
-
-.error {
-  color: #ff5555;
-  font-weight: bold;
-}
-
-.progress-container {
-  width: 300px;
-  height: 20px;
-  background-color: #404040;
-  border-radius: 10px;
-  margin: 1rem auto;
-  overflow: hidden;
-  position: relative;
-}
-
-.progress-bar {
-  height: 100%;
-  background-color: #61dafb;
-  transition: width 0.3s ease;
-}
-
-.progress-container span {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  color: white;
-  font-size: 0.8rem;
-}
-
-/* Estilos mejorados */
-.download-card {
-  background: #2c3e50;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-top: 2rem;
-  width: 90%;
-  max-width: 600px;
-  text-align: left;
-}
-
-.score-preview {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.music-icon {
-  font-size: 2.5rem;
-  background: #3498db;
-  border-radius: 50%;
-  width: 60px;
-  height: 60px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.progress-stats {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 0.5rem;
-  font-size: 0.9em;
-  color: #bdc3c7;
-}
-
 .error-banner {
   background: #e74c3c;
   padding: 1rem;
@@ -118,13 +44,50 @@ button:disabled {
   animation: slideIn 0.3s ease;
 }
 
-button.loading {
-  background: #7f8c8d;
-  cursor: not-allowed;
-  opacity: 0.8;
-}
-
 @keyframes slideIn {
   from { transform: translateY(-20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+.loading {
+  position: relative;
+}
+
+.loading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #fff;
+  border-top: 2px solid #000;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes spin {
+  0% { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+.progress-bar {
+  width: 100%;
+  background-color: #e0e0e0;
+  border-radius: 5px;
+  margin-top: 20px;
+}
+
+.progress {
+  height: 20px;
+  background-color: green;
+  border-radius: 5px;
+  transition: width 0.5s;
+}
+
+.status-message {
+  margin-top: 10px;
+  font-size: 16px;
+  color: #61dafb; /* Ajustar el color para que sea visible en el fondo oscuro */
 }

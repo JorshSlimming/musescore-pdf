@@ -1,13 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import io from 'socket.io-client';
 import './App.css';
+
+const socket = io('http://localhost:5000');
 
 function App() {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
-  const [currentStep, setCurrentStep] = useState(0);
+  const [pdfName, setPdfName] = useState('');
+  const [pdfBlob, setPdfBlob] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [statusMessage, setStatusMessage] = useState('Buscando partitura...');
+  const totalSteps = 10; // Ajusta este valor según el número total de pasos en el backend
+
+  useEffect(() => {
+    socket.on('progress', (data) => {
+      console.log(data.step);
+      setProgress((prevProgress) => prevProgress + 1);
+      if (data.step.includes('Nombre extraído')) {
+        setStatusMessage(`Partitura ${data.name} encontrada`);
+      }
+    });
+
+    return () => {
+      socket.off('progress');
+    };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,32 +38,37 @@ function App() {
     
     setLoading(true);
     setError('');
-    setCurrentStep(1);
+    setProgress(0);
+    setStatusMessage('Buscando partitura...');
 
     try {
-      // Paso 1: Enviar URL al backend para generar el PDF
-      setCurrentStep(1);
-      const response = await axios.post('http://localhost:5000/generate-pdf', { url }, {
-        responseType: 'blob',
-        onDownloadProgress: (progressEvent) => {
-          const percent = Math.min(95, Math.round((progressEvent.loaded * 100) / progressEvent.total));
-          setProgress(percent);
-        }
+      // Paso 1: Obtener el nombre del PDF
+      const nameResponse = await axios.post('http://localhost:5000/get-pdf-name', { url });
+      const fileName = nameResponse.data.name;
+      setPdfName(fileName);
+      setStatusMessage(`Partitura encontrada: ${fileName}`);
+
+      // Paso 2: Generar el PDF
+      const response = await axios.post('http://localhost:5000/generate-pdf', { url, name: fileName + ".pdf" }, {
+        responseType: 'blob'
       });
 
-      // Obtener el nombre del archivo desde los headers
-      const contentDisposition = response.headers['content-disposition'];
-      const filenameMatch = contentDisposition ? contentDisposition.match(/filename="(.+)"/) : null;
-      const fileName = filenameMatch ? filenameMatch[1] : 'partitura.pdf';
+      setPdfBlob(response.data);
 
-      // Paso 2: Descargar el PDF
-      setCurrentStep(2);
-      setProgress(100);
+    } catch (err) {
+      const errorMessage = err.response?.data?.error || 'Error al procesar la partitura';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      const downloadUrl = window.URL.createObjectURL(new Blob([response.data]));
+  const handleDownload = () => {
+    if (pdfBlob && pdfName) {
+      const downloadUrl = window.URL.createObjectURL(new Blob([pdfBlob]));
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.setAttribute('download', fileName);
+      link.setAttribute('download', pdfName + ".pdf");
       document.body.appendChild(link);
       link.click();
 
@@ -52,22 +77,14 @@ function App() {
         link.remove();
       }, 1000);
 
-    } catch (err) {
-      const errorMessage = err.response?.data?.error || 'Error al procesar la partitura';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
+      // Reiniciar el estado de la aplicación
+      setUrl('');
+      setPdfName('');
+      setPdfBlob(null);
       setProgress(0);
-      setCurrentStep(0);
+      setError(''); // Limpiar el estado de error
+      setStatusMessage('Buscando partitura...');
     }
-  };
-
-  const getStepLabel = () => {
-    const steps = {
-      1: 'Generando PDF...',
-      2: 'Descargando...'
-    };
-    return steps[currentStep] || '';
   };
 
   return (
@@ -87,24 +104,21 @@ function App() {
             type="submit" 
             disabled={loading}
             className={loading ? 'loading' : ''}
+            onClick={pdfBlob ? handleDownload : handleSubmit}
           >
-            {loading ? getStepLabel() : 'Generar PDF'}
+            {loading ? 'Generando PDF...' : (pdfBlob ? 'Descargar PDF' : 'Generar PDF')}
           </button>
         </form>
 
         {error && <div className="error-banner">{error}</div>}
-        
+
         {loading && (
-          <div className="progress-container">
-            <div 
-              className="progress-bar"
-              style={{ width: `${progress}%` }}
-            />
-            <div className="progress-stats">
-              <span>{progress}% completado</span>
-              <span>Paso {currentStep} de 2</span>
+          <>
+            <div className="status-message">{statusMessage}</div>
+            <div className="progress-bar">
+              <div className="progress" style={{ width: `${(progress / totalSteps) * 100}%` }}></div>
             </div>
-          </div>
+          </>
         )}
       </header>
     </div>
