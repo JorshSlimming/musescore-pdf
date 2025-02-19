@@ -28,7 +28,7 @@ function App() {
       return;
     }
 
-    const urlPattern = /^https:\/\/musescore\.com\/user\/\d+\/scores\/\d+$/;
+    const urlPattern = /^https:\/\/musescore\.com\/(user\/\d+\/scores\/\d+|official_scores\/scores\/\d+)$/;
     if (!urlPattern.test(url)) {
       setError('Formato URL incorrecto');
       return;

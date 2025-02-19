@@ -122,12 +122,17 @@ app.post('/generate-pdf', async (req, res) => {
     sendEvent(`📌 Imágenes encontradas ${allImageUrls.length}/${containers.length} `);
     console.log(`📌 Imágenes encontradas ${allImageUrls.length}/${containers.length} `);
 
+    const tempDir = path.join(__dirname, 'temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir);
+    }
+
     const images = [];
     sendEvent(`⚙️ Convirtiendo imágenes...`);
     console.log(`⚙️ Convirtiendo imágenes...`);
     for (let i = 0; i < allImageUrls.length; i++) {
       const url = allImageUrls[i];
-      const imagePath = path.join(__dirname, `image${i + 1}.svg`);
+      const imagePath = path.join(tempDir, `image${i + 1}.svg`);
       const response = await axios({ method: 'get', url: url, responseType: 'arraybuffer' });
       await sharp(response.data)
         .resize({ width: 4000 })
@@ -158,7 +163,7 @@ app.post('/generate-pdf', async (req, res) => {
     }
 
     const pdfBytes = await pdfDoc.save();
-    const pdfPath = path.join(__dirname, `${name}`);
+    const pdfPath = path.join(tempDir, `${name}`);
     fs.writeFileSync(pdfPath, pdfBytes);
     sendEvent(`✅ PDF generado con éxito`);
     console.log(`✅ PDF generado con éxito`);
