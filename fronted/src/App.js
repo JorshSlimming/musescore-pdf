@@ -1,9 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
-import io from 'socket.io-client';
 import './App.css';
-
-const socket = io('http://localhost:5000');
 
 function App() {
   const [url, setUrl] = useState('');
@@ -11,23 +8,7 @@ function App() {
   const [error, setError] = useState('');
   const [pdfName, setPdfName] = useState('');
   const [pdfBlob, setPdfBlob] = useState(null);
-  const [progress, setProgress] = useState(0);
-  const [statusMessage, setStatusMessage] = useState('Buscando partitura...');
-  const totalSteps = 10; // Ajusta este valor según el número total de pasos en el backend
-
-  useEffect(() => {
-    socket.on('progress', (data) => {
-      console.log(data.step);
-      setProgress((prevProgress) => prevProgress + 1);
-      if (data.step.includes('Nombre extraído')) {
-        setStatusMessage(`Partitura ${data.name} encontrada`);
-      }
-    });
-
-    return () => {
-      socket.off('progress');
-    };
-  }, []);
+  const [statusMessage, setStatusMessage] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,7 +19,6 @@ function App() {
     
     setLoading(true);
     setError('');
-    setProgress(0);
     setStatusMessage('Buscando partitura...');
 
     try {
@@ -71,22 +51,21 @@ function App() {
       link.setAttribute('download', pdfName + ".pdf");
       document.body.appendChild(link);
       link.click();
-
+  
       setTimeout(() => {
         window.URL.revokeObjectURL(downloadUrl);
         link.remove();
       }, 1000);
-
+  
       // Reiniciar el estado de la aplicación
       setUrl('');
       setPdfName('');
       setPdfBlob(null);
-      setProgress(0);
       setError(''); // Limpiar el estado de error
-      setStatusMessage('Buscando partitura...');
+      setStatusMessage(''); // Limpiar el mensaje de estado
     }
   };
-
+  
   return (
     <div className="App">
       <header className="App-header">
@@ -112,14 +91,7 @@ function App() {
 
         {error && <div className="error-banner">{error}</div>}
 
-        {loading && (
-          <>
-            <div className="status-message">{statusMessage}</div>
-            <div className="progress-bar">
-              <div className="progress" style={{ width: `${(progress / totalSteps) * 100}%` }}></div>
-            </div>
-          </>
-        )}
+        <div className="status-message">{statusMessage}</div>
       </header>
     </div>
   );
