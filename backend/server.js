@@ -1,11 +1,11 @@
+const express = require('express');
+const cors = require('cors');
 const puppeteer = require('puppeteer');
 const axios = require('axios');
 const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 const { PDFDocument } = require('pdf-lib');
-const express = require('express');
-const cors = require('cors');
 
 const app = express();
 const port = 5000;
@@ -15,6 +15,25 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+
+let clients = [];
+
+app.get('/events', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  clients.push(res);
+
+  req.on('close', () => {
+    clients = clients.filter(client => client !== res);
+  });
+});
+
+function sendEvent(message) {
+  clients.forEach(client => client.write(`data: ${message}\n\n`));
+}
 
 async function retryGoto(page, url, options, retries) {
   for (let i = 0; i < retries; i++) {
@@ -73,9 +92,11 @@ app.post('/generate-pdf', async (req, res) => {
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
     await page.setViewport({ width: 1280, height: 800 });
 
+    sendEvent('🚀 Navegando a la página...');
     console.log('🚀 Navegando a la página...');
     await retryGoto(page, url, { waitUntil: 'networkidle2', timeout: 10000 }, 6);
     
+    sendEvent('🔍 Buscando imagenes...');
     console.log('🔍 Buscando imagenes...');
     await page.waitForSelector('.EEnGW.F16e6', { timeout: 15000 });
     const containers = await page.$$('.EEnGW.F16e6');
@@ -98,10 +119,12 @@ app.post('/generate-pdf', async (req, res) => {
       allImageUrls.push(...urls);
     }
 
-    console.log(`📌 Total de imágenes encontradas: ${allImageUrls.length}/${containers.length} `);
+    sendEvent(`📌 Imágenes encontradas ${allImageUrls.length}/${containers.length} `);
+    console.log(`📌 Imágenes encontradas ${allImageUrls.length}/${containers.length} `);
 
     const images = [];
-    console.log(`🖼️ Convirtiendo imágenes a PNG...`);
+    sendEvent(`⚙️ Convirtiendo imágenes...`);
+    console.log(`⚙️ Convirtiendo imágenes...`);
     for (let i = 0; i < allImageUrls.length; i++) {
       const url = allImageUrls[i];
       const imagePath = path.join(__dirname, `image${i + 1}.svg`);
@@ -117,7 +140,8 @@ app.post('/generate-pdf', async (req, res) => {
     const pageWidth = 612;
     const pageHeight = 792;
 
-    console.log(`🖼️ Añadiendo imágenes al PDF...`);
+    sendEvent(`📄 Añadiendo imágenes al PDF...`);
+    console.log(`📄 Añadiendo imágenes al PDF...`);
     for (let i = 0; i < images.length; i++) {
       const imageBytes = fs.readFileSync(images[i]);
       const image = await pdfDoc.embedPng(imageBytes);
@@ -136,7 +160,8 @@ app.post('/generate-pdf', async (req, res) => {
     const pdfBytes = await pdfDoc.save();
     const pdfPath = path.join(__dirname, `${name}`);
     fs.writeFileSync(pdfPath, pdfBytes);
-    console.log(`📄 PDF generado con éxito`);
+    sendEvent(`✅ PDF generado con éxito`);
+    console.log(`✅ PDF generado con éxito`);
 
     images.forEach(imagePath => fs.unlinkSync(imagePath));
     await browser.close();

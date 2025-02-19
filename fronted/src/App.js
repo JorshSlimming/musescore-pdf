@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 
@@ -9,17 +9,35 @@ function App() {
   const [pdfName, setPdfName] = useState('');
   const [pdfBlob, setPdfBlob] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
+  const [logMessages, setLogMessages] = useState([]);
+
+  useEffect(() => {
+    const eventSource = new EventSource('http://localhost:5000/events');
+    eventSource.onmessage = (event) => {
+      setLogMessages((prevMessages) => [...prevMessages, event.data]);
+    };
+    return () => {
+      eventSource.close();
+    };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!url) {
-      setError('Por favor ingresa una URL de MuseScore');
+      setError('Por favor ingresa una URL valida');
+      return;
+    }
+
+    const urlPattern = /^https:\/\/musescore\.com\/user\/\d+\/scores\/\d+$/;
+    if (!urlPattern.test(url)) {
+      setError('Formato URL incorrecto');
       return;
     }
     
     setLoading(true);
     setError('');
     setStatusMessage('Buscando partitura...');
+    setLogMessages([]);
 
     try {
       // Paso 1: Obtener el nombre del PDF
@@ -37,6 +55,7 @@ function App() {
 
     } catch (err) {
       const errorMessage = err.response?.data?.error || 'Error al procesar la partitura';
+      setStatusMessage('');
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -63,6 +82,7 @@ function App() {
       setPdfBlob(null);
       setError(''); // Limpiar el estado de error
       setStatusMessage(''); // Limpiar el mensaje de estado
+      setLogMessages([]); // Limpiar los mensajes de log
     }
   };
   
@@ -70,13 +90,17 @@ function App() {
     <div className="App">
       <header className="App-header">
         <h1>Descargador de Partituras MuseScore</h1>
+        <p>
+          Visita <a href="https://musescore.com" target="_blank" rel="noopener noreferrer">musescore.com</a> para buscar partituras.
+        </p>
         <form onSubmit={handleSubmit}>
           <input
             type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="Ej: https://musescore.com/user/12345/scores/67890"
-            pattern="https://musescore.com/.*"
+            pattern="https://musescore.com/user/\d+/scores/\d+"
+            required
             disabled={loading}
           />
           <button 
@@ -85,13 +109,18 @@ function App() {
             className={loading ? 'loading' : ''}
             onClick={pdfBlob ? handleDownload : handleSubmit}
           >
-            {loading ? 'Generando PDF...' : (pdfBlob ? 'Descargar PDF' : 'Generar PDF')}
+            {loading ? '' : (pdfBlob ? 'Descargar PDF' : 'Generar PDF')}
           </button>
         </form>
 
         {error && <div className="error-banner">{error}</div>}
 
         <div className="status-message">{statusMessage}</div>
+        <div className="log-messages">
+          {logMessages.map((message, index) => (
+            <div key={index}>{message}</div>
+          ))}
+        </div>
       </header>
     </div>
   );
