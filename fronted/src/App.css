@@ -27,11 +27,20 @@ button {
   border-radius: 5px;
   cursor: pointer;
   font-weight: bold;
+  width: 200px;
+  text-align: center;
+  height: 45px; /* Añadir */
+  line-height: 1.5; /* Añadir */
+  margin-top: 1rem;
 }
 
 button:disabled {
   background-color: #ccc;
   cursor: not-allowed;
+  padding: 0.8rem 2rem;
+  width: 200px;
+  height: 45px; /* Ajustar el alto */
+  line-height: 1.5; /* Añadir */
 }
 
 .error-banner {
@@ -76,6 +85,27 @@ button:disabled {
 
 .status-message {
   margin-top: 10px;
-  font-size: 16px;
+  font-size: 20px;
   color: #61dafb; /* Ajustar el color para que sea visible en el fondo oscuro */
+}
+
+.log-messages {
+  margin-top: 5px;
+  max-height: 200px;
+  overflow-y: auto;
+  background-color: #282c34; /* Cambiar el color de fondo */
+  padding: 10px;
+  border-radius: 5px;
+  display: flex;
+  flex-direction: column-reverse; /* Mostrar los mensajes nuevos en la parte inferior */
+  color: white; /* Asegurar que el texto sea visible */
+}
+
+a {
+  color: #1e90ff; /* Cambia el color del hipervínculo */
+  text-decoration: underline; /* Añade subrayado */
+}
+
+a:hover {
+  color: #104e8b; /* Cambia el color del hipervínculo al pasar el ratón */
 }
