@@ -73,13 +73,12 @@ app.post('/generate-pdf', async (req, res) => {
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
     await page.setViewport({ width: 1280, height: 800 });
 
-    await retryGoto(page, url, { waitUntil: 'networkidle2', timeout: 10000 }, 6);
     console.log('🚀 Navegando a la página...');
-
-    console.log('🔍 Buscando contenedores...');
+    await retryGoto(page, url, { waitUntil: 'networkidle2', timeout: 10000 }, 6);
+    
+    console.log('🔍 Buscando imagenes...');
     await page.waitForSelector('.EEnGW.F16e6', { timeout: 15000 });
     const containers = await page.$$('.EEnGW.F16e6');
-    console.log(`🔄 Total de contenedores encontrados: ${containers.length}`);
 
     const allImageUrls = [];
     for (let i = 0; i < containers.length; i++) {
@@ -99,10 +98,10 @@ app.post('/generate-pdf', async (req, res) => {
       allImageUrls.push(...urls);
     }
 
-    console.log('\n📌 Enlaces de imágenes encontrados:');
-    allImageUrls.forEach((url, i) => console.log(`${i + 1}. ${url}`));
+    console.log(`📌 Total de imágenes encontradas: ${allImageUrls.length}/${containers.length} `);
 
     const images = [];
+    console.log(`🖼️ Convirtiendo imágenes a PNG...`);
     for (let i = 0; i < allImageUrls.length; i++) {
       const url = allImageUrls[i];
       const imagePath = path.join(__dirname, `image${i + 1}.svg`);
@@ -111,13 +110,14 @@ app.post('/generate-pdf', async (req, res) => {
         .resize({ width: 4000 })
         .toFormat('png')
         .toFile(imagePath.replace('.svg', '.png'));
-      console.log(`✔️ Imagen descargada y convertida a PNG: ${imagePath.replace('.svg', '.png')}`);
       images.push(imagePath.replace('.svg', '.png'));
     }
 
     const pdfDoc = await PDFDocument.create();
     const pageWidth = 612;
     const pageHeight = 792;
+
+    console.log(`🖼️ Añadiendo imágenes al PDF...`);
     for (let i = 0; i < images.length; i++) {
       const imageBytes = fs.readFileSync(images[i]);
       const image = await pdfDoc.embedPng(imageBytes);
@@ -131,13 +131,12 @@ app.post('/generate-pdf', async (req, res) => {
         width: scaledWidth,
         height: scaledHeight
       });
-      console.log(`✔️ Imagen ${i + 1} añadida al PDF.`);
     }
 
     const pdfBytes = await pdfDoc.save();
     const pdfPath = path.join(__dirname, `${name}`);
     fs.writeFileSync(pdfPath, pdfBytes);
-    console.log(`📄 PDF generado con éxito: ${name}`);
+    console.log(`📄 PDF generado con éxito`);
 
     images.forEach(imagePath => fs.unlinkSync(imagePath));
     await browser.close();
