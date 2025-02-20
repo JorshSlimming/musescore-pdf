@@ -3,7 +3,7 @@ FROM node:18-slim
 WORKDIR /app
 
 # Copiar solo los archivos necesarios del backend
-COPY backend/package*.json ./ 
+COPY package*.json ./ 
 
 # Instalar dependencias de Chromium
 RUN apt-get update && apt-get install -y \
