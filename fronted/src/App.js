@@ -12,7 +12,7 @@ function App() {
   const [logMessages, setLogMessages] = useState([]);
 
   useEffect(() => {
-    const eventSource = new EventSource('http://localhost:5000/events');
+    const eventSource = new EventSource(`${process.env.REACT_APP_API_URL}/events`);
     eventSource.onmessage = (event) => {
       setLogMessages((prevMessages) => [...prevMessages, event.data]);
     };
@@ -41,13 +41,13 @@ function App() {
 
     try {
       // Paso 1: Obtener el nombre del PDF
-      const nameResponse = await axios.post('http://localhost:5000/get-pdf-name', { url });
+      const nameResponse = await axios.post(`${process.env.REACT_APP_API_URL}/get-pdf-name`, { url });
       const fileName = nameResponse.data.name;
       setPdfName(fileName);
       setStatusMessage(`Partitura encontrada: ${fileName}`);
 
       // Paso 2: Generar el PDF
-      const response = await axios.post('http://localhost:5000/generate-pdf', { url, name: fileName + ".pdf" }, {
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/generate-pdf`, { url, name: fileName + ".pdf" }, {
         responseType: 'blob'
       });
 
