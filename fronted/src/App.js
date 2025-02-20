@@ -3,26 +3,33 @@ import axios from 'axios';
 import './App.css';
 
 function App() {
-  const [url, setUrl] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [pdfName, setPdfName] = useState('');
-  const [pdfBlob, setPdfBlob] = useState(null);
-  const [statusMessage, setStatusMessage] = useState('');
-  const [logMessages, setLogMessages] = useState([]);
+  // Estados del componente
+  const [url, setUrl] = useState(''); // Almacena la URL ingresada por el usuario
+  const [loading, setLoading] = useState(false); // Controla el estado de carga
+  const [error, setError] = useState(''); // Maneja mensajes de error
+  const [pdfName, setPdfName] = useState(''); // Nombre del archivo PDF obtenido
+  const [pdfBlob, setPdfBlob] = useState(null); // Blob del PDF generado
+  const [statusMessage, setStatusMessage] = useState(''); // Mensajes de estado del proceso
+  const [logMessages, setLogMessages] = useState([]); // Registro de logs del servidor
 
+  // Conexión SSE para recibir logs en tiempo real
   useEffect(() => {
-    const eventSource = new EventSource('http://localhost:5000/events');
+    const eventSource = new EventSource(`${process.env.REACT_APP_API_URL}/events`);
     eventSource.onmessage = (event) => {
       setLogMessages((prevMessages) => [...prevMessages, event.data]);
     };
+    
+    // Limpieza al desmontar el componente
     return () => {
       eventSource.close();
     };
   }, []);
 
+  // Maneja el envío del formulario
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validaciones iniciales
     if (!url) {
       setError('Por favor ingresa una URL valida');
       return;
@@ -34,26 +41,29 @@ function App() {
       return;
     }
     
+    // Resetear estados y preparar UI para carga
     setLoading(true);
     setError('');
     setStatusMessage('Buscando partitura...');
     setLogMessages([]);
 
     try {
-      // Paso 1: Obtener el nombre del PDF
-      const nameResponse = await axios.post('http://localhost:5000/get-pdf-name', { url });
+      // Paso 1: Obtener nombre del archivo
+      const nameResponse = await axios.post(`${process.env.REACT_APP_API_URL}/get-pdf-name`, { url });
       const fileName = nameResponse.data.name;
       setPdfName(fileName);
       setStatusMessage(`Partitura encontrada: ${fileName}`);
 
       // Paso 2: Generar el PDF
-      const response = await axios.post('http://localhost:5000/generate-pdf', { url, name: fileName + ".pdf" }, {
-        responseType: 'blob'
-      });
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/generate-pdf`, 
+        { url, name: fileName + ".pdf" }, 
+        { responseType: 'blob' }
+      );
 
       setPdfBlob(response.data);
 
     } catch (err) {
+      // Manejo de errores
       const errorMessage = err.response?.data?.error || 'Error al procesar la partitura';
       setStatusMessage('');
       setError(errorMessage);
@@ -62,8 +72,10 @@ function App() {
     }
   };
 
+  // Maneja la descarga del PDF
   const handleDownload = () => {
     if (pdfBlob && pdfName) {
+      // Crear enlace temporal para descarga
       const downloadUrl = window.URL.createObjectURL(new Blob([pdfBlob]));
       const link = document.createElement('a');
       link.href = downloadUrl;
@@ -71,28 +83,32 @@ function App() {
       document.body.appendChild(link);
       link.click();
   
+      // Limpieza después de 1 segundo
       setTimeout(() => {
         window.URL.revokeObjectURL(downloadUrl);
         link.remove();
       }, 1000);
   
-      // Reiniciar el estado de la aplicación
+      // Resetear estados de la aplicación
       setUrl('');
       setPdfName('');
       setPdfBlob(null);
-      setError(''); // Limpiar el estado de error
-      setStatusMessage(''); // Limpiar el mensaje de estado
-      setLogMessages([]); // Limpiar los mensajes de log
+      setError(''); 
+      setStatusMessage(''); 
+      setLogMessages([]); 
     }
   };
   
   return (
     <div className="App">
       <header className="App-header">
+        {/* Sección principal de la UI */}
         <h1>Descargador de Partituras MuseScore</h1>
         <p>
           Visita <a href="https://musescore.com" target="_blank" rel="noopener noreferrer">musescore.com</a> para buscar partituras.
         </p>
+        
+        {/* Formulario de entrada */}
         <form onSubmit={handleSubmit}>
           <input
             type="url"
@@ -103,6 +119,7 @@ function App() {
             required
             disabled={loading}
           />
+          {/* Botón dinámico según estado */}
           <button 
             type="submit" 
             disabled={loading}
@@ -113,8 +130,8 @@ function App() {
           </button>
         </form>
 
+        {/* Sección de mensajes y logs */}
         {error && <div className="error-banner">{error}</div>}
-
         <div className="status-message">{statusMessage}</div>
         <div className="log-messages">
           {logMessages.map((message, index) => (

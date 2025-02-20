@@ -29,8 +29,8 @@ button {
   font-weight: bold;
   width: 200px;
   text-align: center;
-  height: 45px; /* Añadir */
-  line-height: 1.5; /* Añadir */
+  height: 45px;  
+  line-height: 1.5;
   margin-top: 1rem;
 }
 
@@ -39,8 +39,8 @@ button:disabled {
   cursor: not-allowed;
   padding: 0.8rem 2rem;
   width: 200px;
-  height: 45px; /* Ajustar el alto */
-  line-height: 1.5; /* Añadir */
+  height: 45px; 
+  line-height: 1.5;  
 }
 
 .error-banner {
@@ -51,8 +51,8 @@ button:disabled {
   width: 100%;
   max-width: 600px;
   animation: slideIn 0.3s ease;
-  margin-left: auto; /* Añadir */
-  margin-right: auto; /* Añadir */
+  margin-left: auto;  
+  margin-right: auto;  
 }
 
 @keyframes slideIn {
@@ -86,26 +86,26 @@ button:disabled {
 .status-message {
   margin-top: 10px;
   font-size: 20px;
-  color: #61dafb; /* Ajustar el color para que sea visible en el fondo oscuro */
+  color: #61dafb;
 }
 
 .log-messages {
   margin-top: 5px;
   max-height: 200px;
   overflow-y: auto;
-  background-color: #282c34; /* Cambiar el color de fondo */
+  background-color: #282c34; 
   padding: 10px;
   border-radius: 5px;
   display: flex;
-  flex-direction: column-reverse; /* Mostrar los mensajes nuevos en la parte inferior */
-  color: white; /* Asegurar que el texto sea visible */
+  flex-direction: column-reverse; 
+  color: white; 
 }
 
 a {
-  color: #1e90ff; /* Cambia el color del hipervínculo */
-  text-decoration: underline; /* Añade subrayado */
+  color: #1e90ff; 
+  text-decoration: underline;
 }
 
 a:hover {
-  color: #104e8b; /* Cambia el color del hipervínculo al pasar el ratón */
+  color: #104e8b;
 }

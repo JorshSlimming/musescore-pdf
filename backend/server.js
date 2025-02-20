@@ -6,9 +6,12 @@ const sharp = require('sharp');
 const fs = require('fs');
 const path = require('path');
 const { PDFDocument } = require('pdf-lib');
+require('dotenv').config(); 
 
 const app = express();
-const port = process.env.PORT || 5000;
+const port = process.env.PORT;
+
+// Configuración CORS para permitir cabeceras personalizadas
 const corsOptions = {
   exposedHeaders: ['X-PDF-Name'],
 };
@@ -16,39 +19,47 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Almacenamiento de clientes para Server-Sent Events (SSE)
 let clients = [];
 
+// Endpoint para conexiones SSE
 app.get('/events', (req, res) => {
+  // Configuración de cabeceras SSE
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
 
+  // Registrar nuevo cliente
   clients.push(res);
 
+  // Eliminar cliente cuando se cierra la conexión
   req.on('close', () => {
     clients = clients.filter(client => client !== res);
   });
 });
 
+// Función para enviar eventos a todos los clientes conectados
 function sendEvent(message) {
   clients.forEach(client => client.write(`data: ${message}\n\n`));
 }
 
+// Función de reintento para navegación con Puppeteer
 async function retryGoto(page, url, options, retries) {
   for (let i = 0; i < retries; i++) {
     try {
       await page.goto(url, options);
-      return; // Si la navegación es exitosa, salir de la función
+      return; 
     } catch (error) {
       console.error(`❌ Error al navegar a la URL (intento ${i + 1} de ${retries}):`, error);
       if (i === retries - 1) {
-        throw error; // Si es el último intento, lanzar el error
+        throw error; 
       }
     }
   }
 }
 
+// Endpoint para obtener el nombre del PDF
 app.post('/get-pdf-name', async (req, res) => {
   const { url } = req.body;
   if (!url) {
@@ -56,14 +67,17 @@ app.post('/get-pdf-name', async (req, res) => {
   }
 
   try {
+    // Configuración inicial de Puppeteer
     const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
     await page.setViewport({ width: 1280, height: 800 });
 
+    // Navegación con reintentos
     await retryGoto(page, url, { waitUntil: 'networkidle2', timeout: 5000 }, 6);
     console.log('🚀 Navegando a la página...');
 
+    // Extracción del nombre del documento
     console.log('🔍 Extrayendo el nombre para el PDF...');
     const name = await page.evaluate(() => {
       const container = document.querySelector('.nFRPI.V4kyC.z85vg.N30cN');
@@ -80,6 +94,7 @@ app.post('/get-pdf-name', async (req, res) => {
   }
 });
 
+// Endpoint principal para generación de PDF
 app.post('/generate-pdf', async (req, res) => {
   const { url, name } = req.body;
   if (!url || !name) {
@@ -87,20 +102,24 @@ app.post('/generate-pdf', async (req, res) => {
   }
 
   try {
+    // Configuración inicial de Puppeteer
     const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
     const page = await browser.newPage();
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
     await page.setViewport({ width: 1280, height: 800 });
 
+    // Navegación a la página objetivo
     sendEvent('🚀 Navegando a la página...');
     console.log('🚀 Navegando a la página...');
     await retryGoto(page, url, { waitUntil: 'networkidle2', timeout: 10000 }, 6);
     
+    // Búsqueda de contenedores de imágenes
     sendEvent('🔍 Buscando imagenes...');
     console.log('🔍 Buscando imagenes...');
     await page.waitForSelector('.EEnGW.F16e6', { timeout: 15000 });
     const containers = await page.$$('.EEnGW.F16e6');
 
+    // Extracción de URLs de imágenes
     const allImageUrls = [];
     for (let i = 0; i < containers.length; i++) {
       await containers[i].scrollIntoView();
@@ -122,11 +141,13 @@ app.post('/generate-pdf', async (req, res) => {
     sendEvent(`📌 Imágenes encontradas ${allImageUrls.length}/${containers.length} `);
     console.log(`📌 Imágenes encontradas ${allImageUrls.length}/${containers.length} `);
 
+    // Configuración de directorio temporal
     const tempDir = path.join(__dirname, 'temp');
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir);
     }
 
+    // Procesamiento de imágenes con Sharp
     const images = [];
     sendEvent(`⚙️ Convirtiendo imágenes...`);
     console.log(`⚙️ Convirtiendo imágenes...`);
@@ -141,10 +162,12 @@ app.post('/generate-pdf', async (req, res) => {
       images.push(imagePath.replace('.svg', '.png'));
     }
 
+    // Creación del PDF con pdf-lib
     const pdfDoc = await PDFDocument.create();
     const pageWidth = 612;
     const pageHeight = 792;
 
+    // Añadir imágenes al PDF
     sendEvent(`📄 Añadiendo imágenes al PDF...`);
     console.log(`📄 Añadiendo imágenes al PDF...`);
     for (let i = 0; i < images.length; i++) {
@@ -162,15 +185,18 @@ app.post('/generate-pdf', async (req, res) => {
       });
     }
 
+    // Generación y envío del PDF
     const pdfBytes = await pdfDoc.save();
     const pdfPath = path.join(tempDir, `${name}`);
     fs.writeFileSync(pdfPath, pdfBytes);
     sendEvent(`✅ PDF generado con éxito`);
     console.log(`✅ PDF generado con éxito`);
 
+    // Limpieza de recursos
     images.forEach(imagePath => fs.unlinkSync(imagePath));
     await browser.close();
 
+    // Envío del archivo y limpieza final
     res.download(pdfPath, name, () => fs.unlinkSync(pdfPath));
     
   } catch (error) {
@@ -179,6 +205,7 @@ app.post('/generate-pdf', async (req, res) => {
   }
 });
 
+// Inicio del servidor
 app.listen(port, () => {
   console.log(`Servidor corriendo en http://localhost:${port}`);
 });
