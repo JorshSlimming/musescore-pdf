@@ -62,7 +62,7 @@ app.post('/get-pdf-name', async (req, res) => {
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
     await page.setViewport({ width: 1280, height: 800 });
 
-    await retryGoto(page, url, { waitUntil: 'networkidle2', timeout: 15000 }, 6);
+    await retryGoto(page, url, { waitUntil: 'networkidle2', timeout: 30000 }, 2);
     console.log('🚀 Navegando a la página...');
 
     console.log('🔍 Extrayendo el nombre para el PDF...');
@@ -95,7 +95,7 @@ app.post('/generate-pdf', async (req, res) => {
 
     sendEvent('🚀 Navegando a la página...');
     console.log('🚀 Navegando a la página...');
-    await retryGoto(page, url, { waitUntil: 'networkidle2', timeout: 20000 }, 6);
+    await retryGoto(page, url, { waitUntil: 'networkidle2', timeout: 30000 }, 2);
     
     sendEvent('🔍 Buscando imagenes...');
     console.log('🔍 Buscando imagenes...');
