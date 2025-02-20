@@ -8,7 +8,7 @@ const path = require('path');
 const { PDFDocument } = require('pdf-lib');
 
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 5000;
 const corsOptions = {
   exposedHeaders: ['X-PDF-Name'],
 };
