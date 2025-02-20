@@ -10,6 +10,7 @@ const { PDFDocument } = require('pdf-lib');
 const app = express();
 const port = process.env.PORT || 5000;
 const corsOptions = {
+  origin: 'https://musescore-pdf-fronted.onrender.com',
   exposedHeaders: ['X-PDF-Name'],
 };
 
