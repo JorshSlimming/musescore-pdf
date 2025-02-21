@@ -44,12 +44,24 @@ Un conversor web que permite descargar partituras de MuseScore.com como PDF de a
 git clone https://github.com/tu-usuario/musescore-to-pdf.git
 cd musescore-to-pdf
 
-# Instalar dependencias 
+# Instalar dependencias del cliente
+cd fronted
 npm install
 
-#Inicia el proyecto:
+#Inicia el fronted:
+npm start
+
+# Instalar dependencias del servidor
+cd ../backend
+npm install
+
+#Inicia el servidor:
 npm start
 ```
+
+## 🔧 Variables de Entorno
+
+Debe quitar el .example a los archivos .env.example antes de ejecutar
 
 ## 🖥 Cómo Usar
 1. Ingresar URL:
