@@ -64,9 +64,7 @@ npm start
 Debe quitar el .example a los archivos .env.example antes de ejecutar
 
 ## 🖥 Cómo Usar
-1. Ingresar URL:
-
-    - Ejemplo: https://musescore.com/user/12345/scores/67890
+1. Ingresar una URL de una partitura de [MuseScore.com](https://musescore.com):
 
     - Validación automática de formato
 
